@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # 1. API Gateway (The Entry Point)
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8080
+    depends_on:
+      - auth-service
+      - student-service
+      - grade-service
+      - course-service
+    networks:
+      - soa-network
+
+  # 2. Auth Service (Security)
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8088:8088" # External Port 8088
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SERVER_PORT=8088 # Internal Port 8088
+      - DB_HOST=mongo-db
+    depends_on:
+      - mongo-db
+    networks:
+      - soa-network
+
+  # 3. Student Service (Node.js)
+  student-service:
+    build: ./student-service
+    container_name: student-service
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongo-db:27017/university_db
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo-db
+    networks:
+      - soa-network
+
+  # 4. Grade Service (Python)
+  grade-service:
+    build: ./grade-service
+    container_name: grade-service
+    environment:
+      - MONGO_URI=mongodb://mongo-db:27017/university_db
+    ports:
+      - "5000:5000" # Matches your Python code
+    depends_on:
+      - mongo-db
+    networks:
+      - soa-network
+
+  # 5. Course Service (Java SOAP)
+  course-service:
+    build: ./course-service
+    container_name: course-service
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_HOST=mongo-db
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mongo-db
+    networks:
+      - soa-network
+
+  # 6. Billing Service (.NET Core SOAP)
+  billing-service:
+    build: ./billing-service
+    container_name: billing-service
+    environment:
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=mongodb://mongo-db:27017/university_db
+    ports:
+      - "8083:80" # Moved to 8083 to avoid conflict with Grade Service
+    depends_on:
+      - mongo-db
+    networks:
+      - soa-network
+
+  # Frontend Service
+  frontend-service:
+    build: ./frontend-service
+    container_name: frontend-service
+    ports:
+      - "8090:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - soa-network
+
+  # Database (MongoDB)
+  mongo-db:
+    image: mongo:6-jammy
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - soa-network
+
+networks:
+  soa-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

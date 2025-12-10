@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:8090" # Only allow Frontend
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        # 1. Auth Service
+        - id: auth-service
+          uri: http://auth-service:8088
+          predicates:
+            - Path=/auth/**
+
+        # 2. Student Service (REST) - FIXED
+        - id: student-service
+          uri: http://student-service:3000
+          predicates:
+            - Path=/api/students/**
+          filters:
+            # Rewrite /api/students -> /students
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            - AuthenticationFilter
+
+        # 3. Grade Service (REST) - FIXED
+        - id: grade-service
+          uri: http://grade-service:5000
+          predicates:
+            - Path=/api/grades/**
+          filters:
+            # Rewrite /api/grades -> /grades
+            - RewritePath=/api/(?<segment>.*), /$\{segment}
+            - AuthenticationFilter
+
+        # 4. Course Service (SOAP)
+        - id: course-service
+          uri: http://course-service:8082
+          predicates:
+            - Path=/api/courses/**
+          filters:
+            # Rewrite /api/courses/ws/... -> /ws/...
+            - RewritePath=/api/courses/(?<segment>.*), /$\{segment}
+
+        # 5. Billing Service (SOAP)
+        - id: billing-service
+          uri: http://billing-service:80
+          predicates:
+            - Path=/api/billing/**
+          filters:
+             # Rewrite /api/billing/billing.asmx -> /billing.asmx
+             - RewritePath=/api/billing/(?<segment>.*), /$\{segment}
+             - AuthenticationFilter
