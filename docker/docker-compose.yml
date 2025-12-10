@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # 1. API Gateway (The Entry Point)
   api-gateway:
-    build: ./api-gateway
+    build: ../services/api-gateway
     container_name: api-gateway
     ports:
       - "8080:8080"
@@ -20,7 +20,7 @@ services:
 
   # 2. Auth Service (Security)
   auth-service:
-    build: ./auth-service
+    build: ../services/auth-service
     container_name: auth-service
     ports:
       - "8088:8088" # External Port 8088
@@ -35,7 +35,7 @@ services:
 
   # 3. Student Service (Node.js)
   student-service:
-    build: ./student-service
+    build: ../services/student-service
     container_name: student-service
     environment:
       - PORT=3000
@@ -49,7 +49,7 @@ services:
 
   # 4. Grade Service (Python)
   grade-service:
-    build: ./grade-service
+    build: ../services/grade-service
     container_name: grade-service
     environment:
       - MONGO_URI=mongodb://mongo-db:27017/university_db
@@ -62,7 +62,7 @@ services:
 
   # 5. Course Service (Java SOAP)
   course-service:
-    build: ./course-service
+    build: ../services/course-service
     container_name: course-service
     environment:
       - SPRING_PROFILES_ACTIVE=docker
@@ -76,7 +76,7 @@ services:
 
   # 6. Billing Service (.NET Core SOAP)
   billing-service:
-    build: ./billing-service
+    build: ../services/billing-service
     container_name: billing-service
     environment:
       - ASPNETCORE_URLS=http://+:80
@@ -90,7 +90,7 @@ services:
 
   # Frontend Service
   frontend-service:
-    build: ./frontend-service
+    build: ../frontend-service
     container_name: frontend-service
     ports:
       - "8090:80"
