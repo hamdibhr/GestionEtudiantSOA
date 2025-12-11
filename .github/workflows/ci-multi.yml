@@ -68,7 +68,7 @@ jobs:
           severity: 'HIGH,CRITICAL'
 
       - name: Scan with Snyk
-        uses: snyk/actions/docker@v2
+        uses: snyk/actions/docker@v3
         with:
           image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
           args: --severity-threshold=high
