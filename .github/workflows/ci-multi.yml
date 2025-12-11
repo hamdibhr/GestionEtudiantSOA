@@ -1,0 +1,87 @@
+name: ci-multiservice
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ci-multi.yml'
+      - 'services/**'
+      - 'k8s/**'
+
+  workflow_dispatch:
+
+env:
+  IMAGE_PREFIX: "${{ github.repository }}"
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service: [
+          api-gateway,
+          auth-service,
+          billing-service,
+          course-service,
+          grade-service,
+          student-service
+        ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---------------------------------------------------------
+      # Node.js steps ONLY for student-service
+      # ---------------------------------------------------------
+      - name: Setup Node.js (for Node services)
+        if: ${{ matrix.service == 'student-service' }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install npm dependencies
+        if: ${{ matrix.service == 'student-service' }}
+        run: npm install
+        working-directory: ./services/${{ matrix.service }}
+
+      - name: Run tests
+        if: ${{ matrix.service == 'student-service' }}
+        run: npm test
+        working-directory: ./services/${{ matrix.service }}
+      # ---------------------------------------------------------
+
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_PREFIX-${{ matrix.service }}:latest ./services/${{ matrix.service }}
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: 'HIGH,CRITICAL'
+
+      - name: Scan with Snyk
+        uses: snyk/actions/docker@v2
+        with:
+          image: ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
+          args: --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      # ---------------------------------------------------------
+      # OPTIONAL — Enable later if you want Kubernetes deploy
+      # ---------------------------------------------------------
+      # - name: Deploy to Kubernetes
+      #   if: false
+      #   run: |
+      #     kubectl apply -f ./k8s/${{ matrix.service }}-deployment.yml
+      #     kubectl apply -f ./k8s/${{ matrix.service }}-service.yml
+      # ---------------------------------------------------------
+
